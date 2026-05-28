@@ -1,5 +1,5 @@
 import pytest
-from SimpleTokenizer import SimpleTokenizer
+from embedding.SimpleTokenizer import SimpleTokenizer
 
 def test_basic_tokenization():
     tokenizer = SimpleTokenizer()
