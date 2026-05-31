@@ -16,3 +16,6 @@ dev = [
 [project.scripts]
 run-main = "main:run"
 
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
