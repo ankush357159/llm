@@ -1,13 +1,11 @@
-import numpy as np
-
 from embedding.SelfAttention import SelfAttention
 from embedding.SimpleTokenizer import SimpleTokenizer
 from embedding.Vocabulary import Vocabulary
 from embedding.EmbeddingLayer import EmbeddingLayer
 from embedding.PositionalEncoding import PositionalEncoding
 from embedding.LayerNorm import LayerNorm
-
-from embedding.LayerNorm import LayerNorm
+from embedding.MultiHeadAttention import MultiHeadAttention
+from embedding.FeedForward import FeedForward
 
 
 def main():
@@ -75,7 +73,9 @@ def run():
     attention_layer = SelfAttention(embedding_dim)
 
     # Run forward pass extracting diagnostic internal states
-    attn_output, Q, K, V, scores, weights = attention_layer.forward(normalized_vectors)
+    attn_output, Q, K, V, scores, weights = attention_layer.forward(
+        normalized_vectors, return_details=True
+    )
 
     print(f"Tokens Monitored: {tokens}")
     print(f"\nQuery Matrix (Q) Shape: {Q.shape}")
@@ -98,6 +98,39 @@ def run():
 
     print(f"\nFinal Attention Output Context Vectors Shape: {attn_output.shape}")
     print(attn_output)
+
+    print("\n================== 8. MULTI-HEAD ATTENTION ==================")
+    # embedding_dim must be divisible by num_heads; use 4 heads for a 4-dim demo
+    num_heads = 4
+    mha = MultiHeadAttention(embedding_dim=embedding_dim, num_heads=num_heads)
+    print(f"Num Heads: {num_heads}  |  Head Dim: {mha.head_dim}")
+
+    mha_output = mha.forward(normalized_vectors)
+    print(f"Multi-Head Attention Output Shape: {mha_output.shape}")
+    print("Multi-Head Attention Output Matrix:")
+    print(mha_output)
+
+    # Apply a second layer-norm after MHA (standard Transformer residual pattern)
+    post_mha_norm = LayerNorm(embedding_dim)
+    mha_normalized = post_mha_norm.forward(attn_output + mha_output)
+    print(f"\nPost-MHA Normalized Shape: {mha_normalized.shape}")
+
+    print("\n================== 9. FEED-FORWARD NETWORK ==================")
+    hidden_dim = embedding_dim * 4  # standard Transformer ratio is 4x
+    ff = FeedForward(embedding_dim=embedding_dim, hidden_dim=hidden_dim)
+    print(f"FeedForward  embedding_dim={embedding_dim}  hidden_dim={hidden_dim}")
+
+    ff_output = ff.forward(mha_normalized)
+    print(f"FeedForward Output Shape: {ff_output.shape}")
+    print("FeedForward Output Matrix:")
+    print(ff_output)
+
+    # Final layer-norm after FFN (residual connection)
+    post_ff_norm = LayerNorm(embedding_dim)
+    final_output = post_ff_norm.forward(mha_normalized + ff_output)
+    print(f"\nFinal Transformer Block Output Shape: {final_output.shape}")
+    print("Final Output Matrix:")
+    print(final_output)
 
 
 if __name__ == "__main__":
